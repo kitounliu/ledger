@@ -165,10 +165,10 @@ void RSMS_Verify(benchmark::State &state)
         GeneratorG2 generator_g2;
         SetGenerator(generator_g2);
 
-        // Create keys
-        auto                   cabinet_size = static_cast<uint32_t>(state.range(0));
-        auto                   threshold = cabinet_size/2 + 1;
 
+        auto                   cabinet_size = static_cast<uint32_t>(state.range(0));
+
+        // Create keys
         std::vector<PublicVerifyKey>      public_verify_keys;
         std::vector<PrivateKey>           private_keys;
         GroupPublicKey                    group_public_key;
@@ -191,12 +191,11 @@ void RSMS_Verify(benchmark::State &state)
             std::string message{"hello" + std::to_string(rand() * rand())};
             std::unordered_map<uint32_t, Signature> signatures;
             std::unordered_map<uint32_t, Proof> proofs;
-            for (uint32_t i = 0; i < threshold; ++i) {
-                auto sign_index = static_cast<uint32_t>(rng() % cabinet_size);
-                Signature signature = Sign(group_public_key.aggregate_public_key, message, private_keys[sign_index],
+            for (uint32_t i = 0; i < cabinet_size; ++i) {
+                Signature signature = Sign(group_public_key.aggregate_public_key, message, private_keys[i],
                                            generator_g2);
-                Proof pi = Prove(group_public_key.public_verify_key_list[sign_index],
-                                 group_public_key.aggregate_public_key, message, signature, private_keys[sign_index]);
+                Proof pi = Prove(group_public_key.public_verify_key_list[i],
+                                 group_public_key.aggregate_public_key, message, signature, private_keys[i]);
                 signatures.insert({i, signature});
                 proofs.insert({i, pi});
             }
@@ -221,11 +220,10 @@ void RSMS_Verify(benchmark::State &state)
         GeneratorG2 generator_g2;
         SetGenerator(generator_g2);
 
-        // Create keys
         auto                   cabinet_size = static_cast<uint32_t>(state.range(0));
-        auto                   threshold = cabinet_size/2 + 1;
 
-        std::vector<PublicVerifyKey>      public_verify_keys;
+        // Create keys
+         std::vector<PublicVerifyKey>      public_verify_keys;
         std::vector<PrivateKey>           private_keys;
         GroupPublicKey                    group_public_key;
 
@@ -234,7 +232,7 @@ void RSMS_Verify(benchmark::State &state)
 
         for (uint32_t i = 0; i < cabinet_size; ++i)
         {
-            auto new_keys                         = GenerateKeyPair(generator_g2);
+            auto new_keys   = GenerateKeyPair(generator_g2);
             private_keys[i] = new_keys.first;
             public_verify_keys[i] = new_keys.second;
         }
@@ -246,14 +244,10 @@ void RSMS_Verify(benchmark::State &state)
             state.PauseTiming();
             std::string message{"hello" + std::to_string(rand() * rand())};
             std::unordered_map<uint32_t, Signature> signatures;
-           // std::unordered_map<uint32_t, Proof> proofs;
-            for (uint32_t i = 0; i < threshold; ++i) {
-                auto sign_index = static_cast<uint32_t>(rng() % cabinet_size);
-                Signature signature = Sign(group_public_key.aggregate_public_key, message, private_keys[sign_index],
+             for (uint32_t i = 0; i < cabinet_size; ++i) {
+                Signature signature = Sign(group_public_key.aggregate_public_key, message, private_keys[i],
                                            generator_g2);
-            //    Proof pi = Prove(group_public_key.public_verify_key_list[sign_index], group_public_key.aggregate_public_key, message, signature, private_keys[sign_index]);
                 signatures.insert({i, signature});
-           //     proofs.insert({i, pi});
             }
 
 
