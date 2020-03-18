@@ -36,18 +36,6 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
 
 
-    GeneratorG1::GeneratorG1()
-    {
-        clear();
-    }
-
-    GeneratorG1::GeneratorG1(std::string const &string_to_hash)
-    {
-        clear();
-        bn::hashAndMapToG1(*this, string_to_hash);
-    }
-
-
     GeneratorG2::GeneratorG2()
     {
         clear();
@@ -77,7 +65,7 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
         clear();
     }
 
-    void PrivateKey::setHashOf(VerifyKey const &Hpk, Signature const & Hmess, VerifyKey const &verify_key, Signature const &sig, VerifyKey const &com1, VerifyKey const &com2)
+    void PrivateKey::setHash(VerifyKey const &Hpk, Signature const & Hmess, VerifyKey const &verify_key, Signature const &sig, VerifyKey const &com1, VerifyKey const &com2)
     {
         std::ostringstream os;
         os << Hpk << Hmess << verify_key << sig << com1 << com2;
@@ -141,15 +129,6 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
 
 
-
-
-
-    void SetGenerator(GeneratorG1 &generator_g1, std::string const &string_to_hash)
-    {
-        assert(!string_to_hash.empty());
-        bn::hashAndMapToG1(generator_g1, string_to_hash);
-        assert(!generator_g1.isZero());
-    }
 
 
     void SetGenerator(GeneratorG2 &generator_g2, std::string const &string_to_hash)
@@ -218,7 +197,7 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
         bn::G1::mul(com2, Hmess, r);
 
         Proof pi;
-        pi.first.setHashOf(Hpk, Hmess, public_verify_key.verify_key, sig, com1, com2);
+        pi.first.setHash(Hpk, Hmess, public_verify_key.verify_key, sig, com1, com2);
         PrivateKey localVar;
         bn::Fr::mul(localVar, pi.first, sk);
         bn::Fr::add(pi.second, localVar, r);
@@ -245,7 +224,7 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
             bn::G1::sub(com2, tmp1, tmp2);
 
             PrivateKey ch;
-            ch.setHashOf(Hpk, Hmess, public_verify_key.verify_key, sig, com1, com2);
+            ch.setHash(Hpk, Hmess, public_verify_key.verify_key, sig, com1, com2);
 
             return pi.first == ch;
         }
@@ -267,8 +246,6 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
             Signature Hmess;
             bn::hashAndMapToG1(Hmess, apk_mess);
-
-
 
             bn::Fp12  e1, e2;
 
