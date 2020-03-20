@@ -29,7 +29,7 @@
 #include <sstream>
 #include <unordered_map>
 
-namespace bn = mcl::bn256;
+//namespace bn = mcl::bn256;
 
 namespace fetch {
     namespace crypto {
@@ -171,11 +171,13 @@ namespace fetch {
 
 
 // For signatures
-                Signature Sign(PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk, GeneratorG2 const &generator_g2);
+                Signature Sign(PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk);
 
                 Proof Prove(const PublicVerifyKey &public_verify_key, const PublicKey &aggregate_public_key,
                             const MessagePayload &message, const Signature &sig,
                             const PrivateKey &sk);
+
+                std::pair<Signature, Proof> SignProve(const PublicVerifyKey &public_verify_key, PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk);
 
                 bool Verify(const PublicVerifyKey &public_verify_key, const PublicKey &aggregate_public_key,
                             const MessagePayload &message, const Signature &sig, const Proof &pi);
@@ -189,6 +191,8 @@ namespace fetch {
 // but one must compute the public key to verify with
 
                 MultiSignature MultiSig(std::unordered_map<uint32_t, Signature> const &signatures, uint32_t cabinet_size);
+
+                MultiSignature Compress(MultiSignature const &sigma1, MultiSignature const &sigma2, uint32_t cabinet_size);
 
                 bool VerifyMulti(MessagePayload const &message, MultiSignature const &sigma, GroupPublicKey const &gpk,
                                  GeneratorG2 const &generator_g2);

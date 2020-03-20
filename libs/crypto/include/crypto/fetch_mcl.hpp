@@ -32,7 +32,30 @@
 #pragma clang diagnostic ignored "-Wshadow"
 #endif
 
+
+
+#define BN512
+
+#ifdef BLS12
+#include <mcl/bls12_381.hpp>
+namespace bn = mcl::bls12;
+#endif
+#ifdef BN384
+#include <mcl/bn384.hpp>
+namespace bn = mcl::bn384;
+#endif
+#ifdef BN512
+#include <mcl/bn512.hpp>
+namespace bn = mcl::bn512;
+#endif
+#if !defined(BLS12) && !defined(BN384) && !defined(BN512)
+
 #include "mcl/bn256.hpp"
+namespace bn = mcl::bn256;
+#endif
+
+
+
 
 #if defined(__clang__)
 #pragma clang diagnostic pop

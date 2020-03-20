@@ -17,14 +17,14 @@
 //------------------------------------------------------------------------------
 
 #include "crypto/mcl_dkg.hpp"
-#include "mcl/bn256.hpp"
+//#include "mcl/bn256.hpp"
 
 #include <cassert>
 #include <cstddef>
 #include <stdexcept>
 #include <unordered_map>
 
-namespace bn = mcl::bn256;
+//namespace bn = mcl::bn256;
 
 namespace fetch {
 namespace crypto {

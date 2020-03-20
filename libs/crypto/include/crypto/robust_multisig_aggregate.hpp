@@ -29,7 +29,7 @@
 #include <sstream>
 #include <unordered_map>
 
-namespace bn = mcl::bn256;
+//namespace bn = mcl::bn256;
 
 namespace fetch {
 namespace crypto {

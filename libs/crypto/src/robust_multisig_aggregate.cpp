@@ -17,14 +17,14 @@
 //------------------------------------------------------------------------------
 
 #include "crypto/robust_multisig_aggregate.hpp"
-#include "mcl/bn256.hpp"
+//#include "mcl/bn256.hpp"
 
 #include <cassert>
 #include <cstddef>
 #include <stdexcept>
 #include <unordered_map>
 
-namespace bn = mcl::bn256;
+//namespace bn = mcl::bn256;
 
 namespace fetch {
 namespace crypto {
@@ -199,6 +199,7 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
 
 
+
     std::pair<Signature, Proof> SignProve(MessagePayload const &message, std::vector<PrivateKey> const &secret_keys, std::vector<PublicKey> const &public_keys, GeneratorG2 const &generator_g2)
     {
         assert(secret_keys.size() == public_keys.size());
@@ -223,8 +224,6 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
         Signature Hmess;
         bn::hashAndMapToG1(Hmess, apk_mess);
-
-
 
         Signature sig;
         bn::G1::mul(sig, Hmess, sk);  // sign = sk H(m)
@@ -257,13 +256,7 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
 // verify a NIZK proof (sig, pi)
         bool Verify(const GeneratorG2 &generator_g2, std::vector<PublicKey> const &public_keys, MessagePayload const &message, const Signature &sig, const Proof &pi) {
-            std::vector<PrivateKey> coefficients = AggregateCoefficient(public_keys);
-            PublicKey aggregate_public_key;
-            for (uint32_t i = 0; i < public_keys.size(); i++){
-                PublicKey tpk;
-                bn::G2::mul(tpk, public_keys[i], coefficients[i]);
-                bn::G2::add(aggregate_public_key, aggregate_public_key, tpk);
-            }
+            PublicKey aggregate_public_key = AggregatePublicKey(public_keys);
 
             const std::string hash_function_reuse_message = "Message 00000000000000000000000000000000";
             std::string apk_mess;
@@ -290,7 +283,11 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
         }
 
 
-/**
+
+
+
+
+        /**
  * Verifies a signature by pairing equation
  *
  * @param y The public key (can be the group public key, or public key share)

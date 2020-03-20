@@ -17,14 +17,13 @@
 //------------------------------------------------------------------------------
 
 #include "crypto/robust_multisig.hpp"
-#include "mcl/bn256.hpp"
+
 
 #include <cassert>
 #include <cstddef>
 #include <stdexcept>
 #include <unordered_map>
 
-namespace bn = mcl::bn256;
 
 namespace fetch {
 namespace crypto {
@@ -162,7 +161,7 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
  * @param x_i Secret key share
  * @return Signature share
  */
-    Signature Sign(PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk, GeneratorG2 const &generator_g2)
+    Signature Sign(PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk)
     {
         std::string apk_mess = aggregate_public_key.getStr() + message;
 
@@ -172,14 +171,15 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
         bn::G1::mul(sig, Hmess, sk);  // sign = s H(m)
 
-        PublicKey pk;
-        bn::G2::mul(pk, generator_g2, sk);
-
         return sig;
     }
 
 
-// create a NIZK proof
+
+
+
+
+    // create a NIZK proof
     Proof Prove(const PublicVerifyKey &public_verify_key, const PublicKey &aggregate_public_key, const MessagePayload &message, const Signature &sig,
                            const PrivateKey &sk) {
         std::string apk_mess = aggregate_public_key.getStr() + message;
@@ -203,6 +203,40 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
         bn::Fr::add(pi.second, localVar, r);
         return pi;
     }
+
+
+
+
+        std::pair<Signature, Proof> SignProve(const PublicVerifyKey &public_verify_key, PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk)
+        {
+            std::string apk_mess = aggregate_public_key.getStr() + message;
+
+            Signature Hmess;
+            Signature sig;
+            bn::hashAndMapToG1(Hmess, apk_mess);
+
+            bn::G1::mul(sig, Hmess, sk);  // sign = s H(m)
+
+            PrivateKey r;
+            r.setRand();
+
+            VerifyKey Hpk, com1, com2;
+            bn::hashAndMapToG1(Hpk, public_verify_key.public_key.getStr());
+            bn::G1::mul(com1, Hpk, r);
+
+            bn::G1::mul(com2, Hmess, r);
+
+            Proof pi;
+            pi.first.setHash(Hpk, Hmess, public_verify_key.verify_key, sig, com1, com2);
+            PrivateKey localVar;
+            bn::Fr::mul(localVar, pi.first, sk);
+            bn::Fr::add(pi.second, localVar, r);
+
+            return std::make_pair(sig,pi);
+        }
+
+
+
 
 // verify a NIZK proof (sig, pi)
         bool Verify(const PublicVerifyKey &public_verify_key, const PublicKey &aggregate_public_key, const MessagePayload &message, const Signature &sig, const Proof &pi) {
@@ -279,6 +313,28 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
             }
             return std::make_pair(aggregate_signature, signers);
         }
+
+
+        MultiSignature Compress(MultiSignature const &sigma1, MultiSignature const &sigma2, uint32_t cabinet_size)
+        {
+            Signature    multi_signature;
+            SignerRecord signers;
+            signers.resize(cabinet_size, 0);
+
+            assert(sigma1.second.size()==cabinet_size && sigma2.second.size()==cabinet_size);
+            // Add individual signatures to compute multi-signature
+            for (uint32_t i=0; i<cabinet_size;i++)
+            {
+                assert(sigma1.second[i]==0 ||  sigma2.second[i]==0);
+                if (sigma1.second[i]==1 ||  sigma2.second[i]==1)
+                        signers[i] = 1;
+            }
+
+            bn::G1::add(multi_signature, sigma1.first, sigma2.first);
+
+            return std::make_pair(multi_signature, signers);
+        }
+
 
 
         bool VerifyMulti(MessagePayload const &message, MultiSignature const &sigma, GroupPublicKey const &gpk, GeneratorG2 const &generator_g2)

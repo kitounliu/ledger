@@ -22,6 +22,9 @@
 
 #include "benchmark/benchmark.h"
 
+
+constexpr uint32_t wallet_size = 10;
+
 using fetch::byte_array::ByteArray;
 using fetch::byte_array::ConstByteArray;
 
@@ -42,7 +45,7 @@ void ARMS_Sign(benchmark::State &state)
 
     // Create keys
     auto                   transaction_size = static_cast<uint32_t>(state.range(0));
-    uint32_t                          wallet_size = 5;
+ //   uint32_t                          wallet_size = 50;
 
     std::vector<std::vector<PrivateKey>>           SK;
     std::vector<std::vector<PublicKey>>            PK;
@@ -88,7 +91,7 @@ void ARMS_Verify(benchmark::State &state)
 
         // Create keys
         auto                   transaction_size = static_cast<uint32_t>(state.range(0));
-        uint32_t                          wallet_size = 5;
+ //       uint32_t                          wallet_size = 5;
 
         std::vector<std::vector<PrivateKey>>           SK;
         std::vector<std::vector<PublicKey>>            PK;
@@ -121,7 +124,6 @@ void ARMS_Verify(benchmark::State &state)
 
             state.ResumeTiming();
             Verify(generator_g2, PK[sign_index], message, sigma.first, sigma.second);
-
         }
     }
 
@@ -136,7 +138,7 @@ void ARMS_Verify(benchmark::State &state)
 
         // Create keys
         auto                   transaction_size = static_cast<uint32_t>(state.range(0));
-        uint32_t                          wallet_size = 5;
+ //       uint32_t                          wallet_size = 5;
 
         std::vector<std::vector<PrivateKey>>           SK;
         std::vector<std::vector<PublicKey>>            PK;
@@ -183,7 +185,7 @@ void ARMS_Verify(benchmark::State &state)
 
         // Create keys
         auto                   transaction_size = static_cast<uint32_t>(state.range(0));
-        uint32_t                          wallet_size = 5;
+//        uint32_t                          wallet_size = 5;
 
         std::vector<std::vector<PrivateKey>>           SK;
         std::vector<std::vector<PublicKey>>            PK;
@@ -206,8 +208,6 @@ void ARMS_Verify(benchmark::State &state)
             }
         }
 
-
-
         for (auto _ : state)
         {
             state.PauseTiming();
@@ -221,7 +221,6 @@ void ARMS_Verify(benchmark::State &state)
 
             std::vector<std::pair<Signature, Proof>> sigmas;
             sigmas.resize(transaction_size);
-
             for (uint32_t i = 0; i < transaction_size; ++i) {
                 std::pair<Signature, Proof> sigma = SignProve(messages[i], SK[i], PK[i], generator_g2);
                 sigmas[i] = sigma;
@@ -248,7 +247,7 @@ void ARMS_Verify(benchmark::State &state)
 
         // Create keys
         auto                   transaction_size = static_cast<uint32_t>(state.range(0));
-        uint32_t                          wallet_size = 5;
+//        uint32_t                          wallet_size = 5;
 
         std::vector<std::vector<PrivateKey>>           SK;
         std::vector<std::vector<PublicKey>>            PK;
@@ -312,7 +311,7 @@ void ARMS_Verify(benchmark::State &state)
 
         // Create keys
         auto                   transaction_size = static_cast<uint32_t>(state.range(0));
-        uint32_t                          wallet_size = 5;
+//        uint32_t                          wallet_size = 5;
 
         std::vector<std::vector<PrivateKey>>           SK;
         std::vector<std::vector<PublicKey>>            PK;
