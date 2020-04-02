@@ -33,8 +33,9 @@
 #endif
 
 
-
-#define BN512
+#define BLS12
+//#define BN384
+//#define BN512
 
 #ifdef BLS12
 #include <mcl/bls12_381.hpp>

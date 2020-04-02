@@ -16,7 +16,7 @@
 //
 //------------------------------------------------------------------------------
 
-#include "crypto/robust_multisig_aggregate.hpp"
+#include "crypto/aggregating_multisig.hpp"
 
 #include "gtest/gtest.h"
 
@@ -24,19 +24,19 @@
 #include <iostream>
 #include <ostream>
 
-using namespace fetch::crypto::arms::mcl;
+using namespace fetch::crypto::amsp::mcl;
 using namespace fetch::byte_array;
 
 
-TEST(MclMultiSigAggTests, RobustAggSignVerify)
+TEST(MclAggMultiSigTests, AggregatingSignVerify)
 {
   details::MCLInitialiser();
 
   GeneratorG2 generator_g2;
   SetGenerator(generator_g2);
 
-  uint32_t                          transaction_size = 8;
-  uint32_t                          wallet_size = 5;
+  uint32_t                          transaction_size = 1;
+  uint32_t                          wallet_size = 2;
 
   std::vector<std::vector<PrivateKey>>           SK;
   std::vector<std::vector<PublicKey>>            PK;
@@ -60,58 +60,36 @@ TEST(MclMultiSigAggTests, RobustAggSignVerify)
       }
   }
 
+
   std::vector<MessagePayload>                          messages;
   messages.resize(transaction_size);
   for (uint32_t i = 0; i<transaction_size; i++){
       messages[i] = "transaction" + std::to_string(rand() * rand());
   }
 
-  std::vector<Signature> signatures;
+  std::vector<Signature> multiSignatures;
   for (uint32_t i = 0; i < transaction_size; i++)
   {
-      std::pair<Signature, Proof> sigma = SignProve(messages[i], SK[i], PK[i], generator_g2);
+      std::vector<PrivateKey> coefficients = AggregateCoefficients(PK[i]);
+      PublicKey aggregate_public_key = AggregatePublicKey(PK[i], coefficients);
 
-      EXPECT_TRUE(VerifySlow(PK[i], messages[i], sigma.first, generator_g2));
 
-      EXPECT_TRUE(Verify(generator_g2, PK[i], messages[i], sigma.first, sigma.second));
+      std::vector<Signature> signatures;
+      for (uint32_t j = 0; j < wallet_size; j++){
+          Signature sig = Sign(messages[i], SK[i][j], coefficients[j], aggregate_public_key);
+          signatures.push_back(sig);
+      }
 
-      signatures.push_back(sigma.first);
+      Signature sigma = MultiSig(signatures);
+      EXPECT_TRUE(VerifyMulti(PK[i], messages[i], sigma, generator_g2));
+      multiSignatures.push_back(sigma);
   }
 
-  auto aggregate_signature = AggregateSig(signatures);
+  auto aggregate_signature = AggregateSig(multiSignatures);
 
-  EXPECT_TRUE(VerifyAggSig(messages, aggregate_signature, PK, generator_g2));
+  EXPECT_TRUE(VerifyAgg(messages, aggregate_signature, PK, generator_g2));
+
 
 }
 
 
-
-TEST(MclOperationTests, PairingTest){
-    details::MCLInitialiser();
-
-    GeneratorG1 g("hello"), h("world"), gh, g2x;
-
-    bn::G1::add(gh, g, h);
-
-    GeneratorG2 g2;
-    SetGenerator(g2);
-
-    bn::Fp12 eg, eh, egh, eadd, eg2x, et;
-
-    bn::pairing(eg, g, g2);
-    bn::pairing(eh, h, g2);
-    bn::GT::mul(eadd, eg, eh);
-
-    bn::pairing(egh, gh, g2);
-
-    EXPECT_TRUE(eadd == egh);
-
-    PrivateKey x;
-    x.setRand();
-
-    bn::G1::mul(g2x, g, x);
-    bn::pairing(eg2x, g2x, g2);
-    bn::GT::pow(et, eg, x);
-
-    EXPECT_TRUE(eg2x == et);
-}

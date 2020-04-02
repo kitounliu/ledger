@@ -57,29 +57,73 @@ ConstByteArray GenerateRandomData()
   return ConstByteArray{buffer};
 }
 
-void VerifySignature(benchmark::State &state)
+
+    void ECDSA_Sign(benchmark::State &state)
+    {
+        auto                      wallet_size = static_cast<uint32_t>(state.range(0));
+
+
+
+
+        for (auto _ : state)
+        {
+            state.PauseTiming();
+            // create the signer
+            ECDSASigner signer;
+            ConstByteArray msg = GenerateRandomData<2048>();
+
+            state.ResumeTiming();
+            for (uint32_t j = 0; j < wallet_size; j++) {
+                // generate a random message
+
+                // create the signed data
+                signer.Sign(msg);
+            }
+        }
+    }
+
+
+
+void ECDSA_Verify(benchmark::State &state)
 {
-  // generate a random message
-  ConstByteArray msg = GenerateRandomData<2048>();
+    auto                      wallet_size = static_cast<uint32_t>(state.range(0));
 
-  // create the signer and verifier
-  ECDSASigner   signer;
-  ECDSAVerifier verifier(signer.identity());
 
-  // create the signed data
-  auto const signature = signer.Sign(msg);
-  if (signature.empty())
-  {
-    throw std::runtime_error("Unable to sign the message");
-  }
 
-  for (auto _ : state)
-  {
-    // run the verification
-    verifier.Verify(msg, signature);
-  }
+
+    for (auto _ : state)
+    {
+        state.PauseTiming();
+        // create the signer
+        ECDSASigner signer;
+        ECDSAVerifier verifier(signer.identity());
+
+        // generate a random message
+        ConstByteArray msg = GenerateRandomData<2048>();
+
+        std::vector<ConstByteArray> sigma;
+        for (uint32_t j = 0; j < wallet_size; j++) {
+
+            // create the signed data
+            auto const signature = signer.Sign(msg);
+            if (signature.empty())
+            {
+                throw std::runtime_error("Unable to sign the message");
+            }
+            sigma.push_back(signature);
+        }
+
+
+        state.ResumeTiming();
+
+        for (auto sig: sigma) {
+            verifier.Verify(msg, sig);
+        }
+    }
+
 }
 
 }  // namespace
 
-BENCHMARK(VerifySignature);
+BENCHMARK(ECDSA_Sign)->RangeMultiplier(2)->Range(1, 1<<10);
+BENCHMARK(ECDSA_Verify)->RangeMultiplier(2)->Range(1, 1<<10);

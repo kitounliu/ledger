@@ -121,7 +121,67 @@ void AggregateSign(benchmark::State &state)
   }
 }
 
-void VerifyAggregateSignatureOptimal(benchmark::State &state)
+
+
+    void VerifyAggregateSignatureOptimal(benchmark::State &state)
+    {
+        fetch::crypto::mcl::details::MCLInitialiser();
+        Generator generator;
+        fetch::crypto::mcl::SetGenerator(generator);
+
+        // Create keys
+        auto                             cabinet_size = static_cast<uint32_t>(state.range(0));
+        uint32_t                         threshold    = cabinet_size / 2 + 1;
+        std::vector<AggregatePrivateKey> aggregate_private_keys;
+        std::vector<AggregatePublicKey>  aggregate_public_keys;
+        std::vector<PublicKey>           notarisation_public_keys;
+
+        aggregate_private_keys.resize(cabinet_size);
+        aggregate_public_keys.resize(cabinet_size);
+
+        for (uint32_t i = 0; i < cabinet_size; ++i)
+        {
+            auto keys                             = fetch::crypto::mcl::GenerateKeyPair(generator);
+            aggregate_private_keys[i].private_key = keys.first;
+            notarisation_public_keys.push_back(keys.second);
+        }
+
+        for (uint32_t i = 0; i < cabinet_size; ++i)
+        {
+            aggregate_private_keys[i].coefficient = fetch::crypto::mcl::SignatureAggregationCoefficient(
+                    notarisation_public_keys[i], notarisation_public_keys);
+            aggregate_public_keys[i] =
+                    AggregatePublicKey{notarisation_public_keys[i], aggregate_private_keys[i].coefficient};
+        }
+
+        for (auto _ : state)
+        {
+            state.PauseTiming();
+            // Generate a random message
+            ConstByteArray msg = GenerateRandomData(256);
+            // Randomly select indices to sign
+            std::unordered_map<uint32_t, fetch::crypto::mcl::Signature> signatures;
+            while (signatures.size() < threshold)
+            {
+                auto sign_index = static_cast<uint32_t>(rng() % cabinet_size);
+                auto signature  = fetch::crypto::mcl::AggregateSign(msg, aggregate_private_keys[sign_index]);
+                signatures.insert({sign_index, signature});
+            }
+            auto aggregate_signature =
+                    fetch::crypto::mcl::ComputeAggregateSignature(signatures, cabinet_size);
+            state.ResumeTiming();
+
+            // Verify aggregate signature
+            auto aggregate_public_key = fetch::crypto::mcl::ComputeAggregatePublicKey(
+                    aggregate_signature.second, aggregate_public_keys);
+            fetch::crypto::mcl::VerifySign(aggregate_public_key, msg, aggregate_signature.first, generator);
+        }
+    }
+
+
+
+
+void ComputeAggregateSignature(benchmark::State &state)
 {
   fetch::crypto::mcl::details::MCLInitialiser();
   Generator generator;
@@ -129,7 +189,8 @@ void VerifyAggregateSignatureOptimal(benchmark::State &state)
 
   // Create keys
   auto                             cabinet_size = static_cast<uint32_t>(state.range(0));
-  uint32_t                         threshold    = cabinet_size / 2 + 1;
+//    uint32_t                             cabinet_size = 5;
+
   std::vector<AggregatePrivateKey> aggregate_private_keys;
   std::vector<AggregatePublicKey>  aggregate_public_keys;
   std::vector<PublicKey>           notarisation_public_keys;
@@ -159,22 +220,19 @@ void VerifyAggregateSignatureOptimal(benchmark::State &state)
     ConstByteArray msg = GenerateRandomData(256);
     // Randomly select indices to sign
     std::unordered_map<uint32_t, fetch::crypto::mcl::Signature> signatures;
-    while (signatures.size() < threshold)
-    {
-      auto sign_index = static_cast<uint32_t>(rng() % cabinet_size);
-      auto signature  = fetch::crypto::mcl::AggregateSign(msg, aggregate_private_keys[sign_index]);
-      signatures.insert({sign_index, signature});
-    }
-    auto aggregate_signature =
-        fetch::crypto::mcl::ComputeAggregateSignature(signatures, cabinet_size);
-    state.ResumeTiming();
 
-    // Verify aggregate signature
-    auto aggregate_public_key = fetch::crypto::mcl::ComputeAggregatePublicKey(
-        aggregate_signature.second, aggregate_public_keys);
-    fetch::crypto::mcl::VerifySign(aggregate_public_key, msg, aggregate_signature.first, generator);
+    state.ResumeTiming();
+    for (uint32_t i = 0; i<cabinet_size; i++){
+        auto signature  = fetch::crypto::mcl::AggregateSign(msg, aggregate_private_keys[i]);
+        signatures.insert({i, signature});
+    }
+
+    fetch::crypto::mcl::ComputeAggregateSignature(signatures, cabinet_size);
+
   }
 }
+
+
 
 void VerifyAggregateSignatureSlow(benchmark::State &state)
 {
@@ -231,5 +289,6 @@ void VerifyAggregateSignatureSlow(benchmark::State &state)
 
 BENCHMARK(SignatureAggregationCoefficient)->RangeMultiplier(2)->Range(50, 500);
 BENCHMARK(AggregateSign)->RangeMultiplier(2)->Range(50, 500);
+BENCHMARK(ComputeAggregateSignature)->RangeMultiplier(2)->Range(1, 1024);
 BENCHMARK(VerifyAggregateSignatureOptimal)->RangeMultiplier(2)->Range(50, 500);
 BENCHMARK(VerifyAggregateSignatureSlow)->RangeMultiplier(2)->Range(50, 500);

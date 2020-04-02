@@ -18,7 +18,7 @@
 
 #include "core/byte_array/byte_array.hpp"
 #include "core/random/lcg.hpp"
-#include "crypto/robust_multisig_aggregate.hpp"
+#include "crypto/aggregating_multisig.hpp"
 
 #include "benchmark/benchmark.h"
 
@@ -29,7 +29,7 @@ using fetch::byte_array::ByteArray;
 using fetch::byte_array::ConstByteArray;
 
 
-using namespace fetch::crypto::arms::mcl;
+using namespace fetch::crypto::amsp::mcl;
 
 using RNG = fetch::random::LinearCongruentialGenerator;
 
@@ -38,7 +38,7 @@ namespace {
 RNG rng;
 
 
-void ARMS_Sign(benchmark::State &state)
+void AMSP_Sign(benchmark::State &state)
 {
     details::MCLInitialiser();
     GeneratorG2 generator_g2;
@@ -74,17 +74,25 @@ void ARMS_Sign(benchmark::State &state)
     {
         state.PauseTiming();
         std::string message{"hello" + std::to_string(rand() * rand())};
-        auto sign_index = static_cast<uint32_t>(rng() % transaction_size);
+
+        auto i = static_cast<uint32_t>(rng() % transaction_size);
+
         state.ResumeTiming();
 
-        // Compute signing
-        SignProve(message, SK[sign_index], PK[sign_index], generator_g2);
+        std::vector<PrivateKey> coefficients = AggregateCoefficients(PK[i]);
+        PublicKey aggregate_public_key = AggregatePublicKey(PK[i], coefficients);
+        std::vector<Signature> signatures;
+        for (uint32_t j = 0; j < wallet_size; j++){
+            Signature sig = Sign(message, SK[i][j], coefficients[j], aggregate_public_key);
+            signatures.push_back(sig);
+        }
+        MultiSig(signatures);
     }
 }
 
 
 
-void ARMS_Verify(benchmark::State &state)
+void AMSP_VerifyMulti(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -120,18 +128,28 @@ void ARMS_Verify(benchmark::State &state)
         {
             state.PauseTiming();
             std::string message{"hello" + std::to_string(rand() * rand())};
-            auto sign_index = static_cast<uint32_t>(rng() % transaction_size);
-            std::pair<Signature, Proof> sigma = SignProve(message, SK[sign_index], PK[sign_index], generator_g2);
+
+            auto i = static_cast<uint32_t>(rng() % transaction_size);
+
+            std::vector<PrivateKey> coefficients = AggregateCoefficients(PK[i]);
+            PublicKey aggregate_public_key = AggregatePublicKey(PK[i], coefficients);
+            std::vector<Signature> signatures;
+            for (uint32_t j = 0; j < wallet_size; j++){
+                Signature sig = Sign(message, SK[i][j], coefficients[j], aggregate_public_key);
+                signatures.push_back(sig);
+            }
+            Signature sigma = MultiSig(signatures);
 
             state.ResumeTiming();
-            Verify(generator_g2, PK[sign_index], message, sigma.first, sigma.second);
+            VerifyMulti(PK[i], message, sigma, generator_g2);
         }
     }
 
 
 
 
-    void ARMS_Verify_Slow(benchmark::State &state)
+
+    void AMSP_Aggregate(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -139,13 +157,16 @@ void ARMS_Verify(benchmark::State &state)
 
         // Create keys
         uint32_t                  transaction_size = 20;
-        auto                          wallet_size = static_cast<uint32_t>(state.range(0));
+        auto                      wallet_size = static_cast<uint32_t>(state.range(0));
 
         std::vector<std::vector<PrivateKey>>           SK;
         std::vector<std::vector<PublicKey>>            PK;
+//        std::vector<PrivateKey>                 fast_keys;
 
         SK.resize(transaction_size);
         PK.resize(transaction_size);
+//        fast_keys.resize(transaction_size);
+
         for (uint32_t i = 0; i<transaction_size; i++)
         {
             SK[i].resize(wallet_size);
@@ -159,53 +180,8 @@ void ARMS_Verify(benchmark::State &state)
                 auto new_keys                         = GenerateKeyPair(generator_g2);
                 SK[i][j] = new_keys.first;
                 PK[i][j] = new_keys.second;
-            }
-        }
 
-
-        for (auto _ : state)
-        {
-            state.PauseTiming();
-            std::string message{"hello" + std::to_string(rand() * rand())};
-            auto sign_index = static_cast<uint32_t>(rng() % transaction_size);
-            std::pair<Signature, Proof> sigma = SignProve(message, SK[sign_index], PK[sign_index], generator_g2);
-
-            state.ResumeTiming();
-            VerifySlow(PK[sign_index], message, sigma.first, generator_g2);
-
-        }
-    }
-
-
-
-    void ARMS_Combine(benchmark::State &state)
-    {
-        details::MCLInitialiser();
-        GeneratorG2 generator_g2;
-        SetGenerator(generator_g2);
-
-        // Create keys
-        auto                   transaction_size = static_cast<uint32_t>(state.range(0));
-//        uint32_t                          wallet_size = 5;
-
-        std::vector<std::vector<PrivateKey>>           SK;
-        std::vector<std::vector<PublicKey>>            PK;
-
-        SK.resize(transaction_size);
-        PK.resize(transaction_size);
-        for (uint32_t i = 0; i<transaction_size; i++)
-        {
-            SK[i].resize(wallet_size);
-            PK[i].resize(wallet_size);
-        }
-
-        for (uint32_t i = 0; i < transaction_size; i++)
-        {
-            for (uint32_t j = 0; j < wallet_size; j++)
-            {
-                auto new_keys                         = GenerateKeyPair(generator_g2);
-                SK[i][j] = new_keys.first;
-                PK[i][j] = new_keys.second;
+   //             bn::Fr::add(fast_keys[i], fast_keys[i], SK[i][j]);
             }
         }
 
@@ -220,19 +196,28 @@ void ARMS_Verify(benchmark::State &state)
             }
 
 
-            std::vector<std::pair<Signature, Proof>> sigmas;
+
+            std::vector<Signature> sigmas;
             sigmas.resize(transaction_size);
             for (uint32_t i = 0; i < transaction_size; ++i) {
-                std::pair<Signature, Proof> sigma = SignProve(messages[i], SK[i], PK[i], generator_g2);
-                sigmas[i] = sigma;
+                std::vector<PrivateKey> coefficients = AggregateCoefficients(PK[i]);
+                PublicKey aggregate_public_key = AggregatePublicKey(PK[i], coefficients);
+
+                std::vector<Signature> signatures;
+                for (uint32_t j = 0; j < wallet_size; j++){
+                    Signature sig = Sign(messages[i], SK[i][j], coefficients[j], aggregate_public_key);
+                    signatures.push_back(sig);
+                }
+                sigmas[i] = MultiSig(signatures);
             }
 
-            std::vector<Signature> validSignatures;
+
             state.ResumeTiming();
+            std::vector<Signature> validSignatures;
             for (uint32_t i = 0; i < transaction_size; ++i){
-              bool b = Verify(generator_g2, PK[i], messages[i], sigmas[i].first, sigmas[i].second);
+              bool b = VerifyMulti(PK[i], messages[i], sigmas[i], generator_g2);
               if (b) {
-                  validSignatures.push_back(sigmas[i].first);
+                  validSignatures.push_back(sigmas[i]);
               }
             }
             AggregateSig(validSignatures);
@@ -240,7 +225,8 @@ void ARMS_Verify(benchmark::State &state)
     }
 
 
-    void ARMS_Combine_Slow(benchmark::State &state)
+
+    void AMSP_VerifyAgg(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -272,6 +258,8 @@ void ARMS_Verify(benchmark::State &state)
         }
 
 
+
+
         for (auto _ : state)
         {
             state.PauseTiming();
@@ -282,94 +270,52 @@ void ARMS_Verify(benchmark::State &state)
                 messages[i] = "transaction" + std::to_string(rand() * rand());
             }
 
-            std::vector<std::pair<Signature, Proof>> sigmas;
+            std::vector<Signature> sigmas;
             sigmas.resize(transaction_size);
-
             for (uint32_t i = 0; i < transaction_size; ++i) {
-                std::pair<Signature, Proof> sigma = SignProve(messages[i], SK[i], PK[i], generator_g2);
-                sigmas[i] = sigma;
+                std::vector<PrivateKey> coefficients = AggregateCoefficients(PK[i]);
+                PublicKey aggregate_public_key = AggregatePublicKey(PK[i], coefficients);
+
+                std::vector<Signature> signatures;
+                for (uint32_t j = 0; j < wallet_size; j++){
+                    Signature sig = Sign(messages[i], SK[i][j], coefficients[j], aggregate_public_key);
+                    signatures.push_back(sig);
+                }
+                sigmas[i] = MultiSig(signatures);
             }
 
             std::vector<Signature> validSignatures;
-            state.ResumeTiming();
             for (uint32_t i = 0; i < transaction_size; ++i){
-                bool b = VerifySlow(PK[i], messages[i], sigmas[i].first, generator_g2);
+                bool b = VerifyMulti(PK[i], messages[i], sigmas[i], generator_g2);
                 if (b) {
-                    validSignatures.push_back(sigmas[i].first);
+                    validSignatures.push_back(sigmas[i]);
                 }
             }
-            AggregateSig(validSignatures);
-        }
 
-    }
-
-
-    void ARMS_VerifyAgg(benchmark::State &state)
-    {
-        details::MCLInitialiser();
-        GeneratorG2 generator_g2;
-        SetGenerator(generator_g2);
-
-        // Create keys
-        auto                   transaction_size = static_cast<uint32_t>(state.range(0));
-//        uint32_t                          wallet_size = 5;
-
-        std::vector<std::vector<PrivateKey>>           SK;
-        std::vector<std::vector<PublicKey>>            PK;
-
-        SK.resize(transaction_size);
-        PK.resize(transaction_size);
-        for (uint32_t i = 0; i<transaction_size; i++)
-        {
-            SK[i].resize(wallet_size);
-            PK[i].resize(wallet_size);
-        }
-
-        for (uint32_t i = 0; i < transaction_size; i++)
-        {
-            for (uint32_t j = 0; j < wallet_size; j++)
-            {
-                auto new_keys                         = GenerateKeyPair(generator_g2);
-                SK[i][j] = new_keys.first;
-                PK[i][j] = new_keys.second;
-            }
-        }
-
-
-
-
-        for (auto _ : state)
-        {
-            state.PauseTiming();
-
-            std::vector<MessagePayload>                          messages;
-            messages.resize(transaction_size);
-            for (uint32_t i = 0; i<transaction_size; i++){
-                messages[i] = "transaction" + std::to_string(rand() * rand());
-            }
-
-            std::vector<Signature> signatures;
-            signatures.resize(transaction_size);
-
-            for (uint32_t i = 0; i < transaction_size; ++i) {
-                std::pair<Signature, Proof> sigma = SignProve(messages[i], SK[i], PK[i], generator_g2);
-                signatures[i] = sigma.first;
-            }
-
-
-            auto aggregate_signature = AggregateSig(signatures);
+            auto aggregate_signature = AggregateSig(validSignatures);
 
             state.ResumeTiming();
 
-            VerifyAggSig(messages, aggregate_signature, PK, generator_g2);
+            VerifyAgg(messages, aggregate_signature, PK, generator_g2);
         }
     }
 
 }  // namespace
 
-BENCHMARK(ARMS_Sign)->RangeMultiplier(2)->Range(1, 1<<10);
-BENCHMARK(ARMS_Verify)->RangeMultiplier(2)->Range(1, 1<<10);
-BENCHMARK(ARMS_Verify_Slow)->RangeMultiplier(2)->Range(0, 0);
-BENCHMARK(ARMS_Combine)->RangeMultiplier(2)->Range(0, 0);
-BENCHMARK(ARMS_Combine_Slow)->RangeMultiplier(2)->Range(0, 0);
-BENCHMARK(ARMS_VerifyAgg)->RangeMultiplier(2)->Range(0, 0);
+
+
+// For more complex patterns of inputs, passing a custom function
+// to Apply allows programmatic specification of an
+// arbitrary set of arguments to run the microbenchmark on.
+// The following example enumerates a dense range on
+// one parameter, and a sparse range on the second.
+//static void CustomArguments(benchmark::internal::Benchmark* b) {
+//    for (int i = 1; i <= 1024; i = i + 5)
+//            b->Args({i});
+//}
+
+//BENCHMARK(AMSP_Sign)->Apply(CustomArguments);
+BENCHMARK(AMSP_Sign)->RangeMultiplier(2)->Range(1, 1<<12);
+BENCHMARK(AMSP_VerifyMulti)->RangeMultiplier(2)->Range(1, 1<<12);
+BENCHMARK(AMSP_Aggregate)->RangeMultiplier(2)->Range(50, 50);
+BENCHMARK(AMSP_VerifyAgg)->RangeMultiplier(2)->Range(50, 50);

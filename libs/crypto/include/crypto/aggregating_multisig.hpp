@@ -33,7 +33,7 @@
 
 namespace fetch {
 namespace crypto {
-namespace arms {
+namespace amsp {
     namespace mcl {
 
         namespace details {
@@ -92,17 +92,6 @@ namespace arms {
         };
 
 
-        /// Class for ZKP
-        /// @{
-        class Proof : public std::pair<PrivateKey, PrivateKey> {
-        public:
-            Proof() = default;
-
-            std::pair<std::string, std::string> toString() const;
-
-            bool assign(const std::pair<std::string, std::string> &s);
-        };
-
 
 
         using MessagePayload     = std::string;
@@ -156,18 +145,16 @@ namespace arms {
         std::pair<PrivateKey, PublicKey> GenerateKeyPair(GeneratorG2 const &generator_g2);
 
 // For aggregating public key and coefficients
-        PublicKey AggregatePublicKey(std::vector<PublicKey> const &public_keys);
+        std::vector<PrivateKey> AggregateCoefficients(std::vector<PublicKey> const &public_keys);
+        PublicKey AggregatePublicKey(std::vector<PublicKey> const &public_keys, std::vector<PrivateKey> const & coefficients);
 
 // For signatures
-        std::pair<Signature, Proof> SignProve(MessagePayload const &message, std::vector<PrivateKey> const &secret_keys, std::vector<PublicKey> const &public_keys, GeneratorG2 const &generator_g2);
+        Signature Sign(MessagePayload const &message, PrivateKey const &secret_key, PrivateKey const &coefficient, PublicKey const & aggregate_public_key);
 
-        Proof Prove(const GeneratorG2 &generator_g2, const PublicKey &aggregate_public_key, const Signature &Hmess, const Signature &sig,
-                    const PrivateKey &sk);
+        Signature MultiSig(std::vector<Signature> const &signatures);
 
-        bool Verify(const GeneratorG2 &generator_g2, std::vector<PublicKey> const &public_keys, MessagePayload const &message, const Signature &sig, const Proof &pi);
-
-        bool VerifySlow(std::vector<PublicKey> const &public_keys,  MessagePayload const &message, Signature const &sig,
-                        GeneratorG2 const &generator_g2);
+        bool VerifyMulti(std::vector<PublicKey> const &public_keys,  MessagePayload const &message, Signature const &sig,
+                    GeneratorG2 const &generator_g2);
 
 
 // For aggregate signatures. Note only the verification of the signatures is done using VerifySign
@@ -175,20 +162,20 @@ namespace arms {
 
         Signature AggregateSig(std::vector<Signature> const &signatures);
 
-        bool VerifyAggSig(std::vector<MessagePayload> const & messages, Signature const &aggregate_signature, std::vector<std::vector<PublicKey>> const &PK, GeneratorG2 const &generator_g2);
+        bool VerifyAgg(std::vector<MessagePayload> const & messages, Signature const &aggregate_signature, std::vector<std::vector<PublicKey>> const &PK, GeneratorG2 const &generator_g2);
 
 
       }// namespace mcl
-    }  // namespace arms
+    }  // namespace amsp
 }  // namespace crypto
 
     namespace serializers {
         template <typename D>
-        struct ArraySerializer<crypto::arms::mcl::Signature, D>
+        struct ArraySerializer<crypto::amsp::mcl::Signature, D>
         {
 
         public:
-            using Type       = crypto::arms::mcl::Signature;
+            using Type       = crypto::amsp::mcl::Signature;
             using DriverType = D;
 
             template <typename Constructor>
@@ -214,11 +201,11 @@ namespace arms {
         };
 
         template <typename D>
-        struct ArraySerializer<crypto::arms::mcl::PrivateKey, D>
+        struct ArraySerializer<crypto::amsp::mcl::PrivateKey, D>
         {
 
         public:
-            using Type       = crypto::arms::mcl::PrivateKey;
+            using Type       = crypto::amsp::mcl::PrivateKey;
             using DriverType = D;
 
             template <typename Constructor>
@@ -244,11 +231,11 @@ namespace arms {
         };
 
         template <typename D>
-        struct ArraySerializer<crypto::arms::mcl::PublicKey, D>
+        struct ArraySerializer<crypto::amsp::mcl::PublicKey, D>
         {
 
         public:
-            using Type       = crypto::arms::mcl::PublicKey;
+            using Type       = crypto::amsp::mcl::PublicKey;
             using DriverType = D;
 
             template <typename Constructor>
@@ -274,10 +261,10 @@ namespace arms {
         };
 
         template <typename V, typename D>
-        struct ArraySerializer<std::pair<crypto::arms::mcl::PublicKey, V>, D>
+        struct ArraySerializer<std::pair<crypto::amsp::mcl::PublicKey, V>, D>
         {
         public:
-            using Type       = std::pair<crypto::arms::mcl::PublicKey, V>;
+            using Type       = std::pair<crypto::amsp::mcl::PublicKey, V>;
             using DriverType = D;
 
             template <typename Constructor>
