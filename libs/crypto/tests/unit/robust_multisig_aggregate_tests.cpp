@@ -69,6 +69,10 @@ TEST(MclMultiSigAggTests, RobustAggSignVerify)
   std::vector<Signature> signatures;
   for (uint32_t i = 0; i < transaction_size; i++)
   {
+      Signature sig = Sign(messages[i], SK[i], PK[i], generator_g2);
+
+      EXPECT_TRUE(VerifySlow(PK[i], messages[i], sig, generator_g2));
+
       std::pair<Signature, Proof> sigma = SignProve(messages[i], SK[i], PK[i], generator_g2);
 
       EXPECT_TRUE(VerifySlow(PK[i], messages[i], sigma.first, generator_g2));

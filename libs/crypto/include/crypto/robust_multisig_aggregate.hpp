@@ -159,6 +159,8 @@ namespace arms {
         PublicKey AggregatePublicKey(std::vector<PublicKey> const &public_keys);
 
 // For signatures
+        Signature Sign(MessagePayload const &message, std::vector<PrivateKey> const &secret_keys, std::vector<PublicKey> const &public_keys, GeneratorG2 const &generator_g2);
+
         std::pair<Signature, Proof> SignProve(MessagePayload const &message, std::vector<PrivateKey> const &secret_keys, std::vector<PublicKey> const &public_keys, GeneratorG2 const &generator_g2);
 
         Proof Prove(const GeneratorG2 &generator_g2, const PublicKey &aggregate_public_key, const Signature &Hmess, const Signature &sig,

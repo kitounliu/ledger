@@ -197,9 +197,41 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
         return aggregate_public_key;
     }
 
+// create a signature without NIZK proof
+        Signature Sign(MessagePayload const &message, std::vector<PrivateKey> const &secret_keys, std::vector<PublicKey> const &public_keys, GeneratorG2 const &generator_g2)
+        {
+            assert(secret_keys.size() == public_keys.size());
+
+            std::vector<PrivateKey> coefficients = AggregateCoefficient(public_keys);
+
+            PrivateKey sk;
+            for (uint32_t i=0; i<secret_keys.size();i++){
+                PrivateKey tmp;
+                bn::Fr::mul(tmp, secret_keys[i], coefficients[i]);
+                bn::Fr::add(sk, sk, tmp);
+            }
+
+            PublicKey aggregate_public_key;
+            bn::G2::mul(aggregate_public_key, generator_g2, sk);
 
 
+            const std::string hash_function_reuse_message = "Message 00000000000000000000000000000000";
+            std::string apk_mess;
+            apk_mess.reserve(hash_function_reuse_message.length() + PUBLIC_KEY_BYTE_SIZE + message.size() );
+            apk_mess = "Message 00000000000000000000000000000000" + aggregate_public_key.getStr() + message;
 
+            Signature Hmess;
+            bn::hashAndMapToG1(Hmess, apk_mess);
+
+            Signature sig;
+            bn::G1::mul(sig, Hmess, sk);  // sign = sk H(m)
+
+
+            return sig;
+        }
+
+
+// create a signature with NIZK proof
     std::pair<Signature, Proof> SignProve(MessagePayload const &message, std::vector<PrivateKey> const &secret_keys, std::vector<PublicKey> const &public_keys, GeneratorG2 const &generator_g2)
     {
         assert(secret_keys.size() == public_keys.size());

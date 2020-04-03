@@ -210,9 +210,9 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
             bn::hashAndMapToG1(Hmess, apk_mess);
 
             Signature sig;
-            bn::G1::mul(sig, Hmess, secret_key);  // sign = sk H(m)
-
-            bn::G1::mul(sig, sig, coefficient);
+            PrivateKey tsk;
+            bn::Fr::mul(tsk, secret_key, coefficient);
+            bn::G1::mul(sig, Hmess, tsk);  // sign =  H(m)^{sk a}
 
             return sig;
         }
