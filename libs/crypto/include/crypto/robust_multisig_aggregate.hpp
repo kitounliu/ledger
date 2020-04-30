@@ -177,7 +177,7 @@ namespace arms {
 
         Signature AggregateSig(std::vector<Signature> const &signatures);
 
-        bool VerifyAggSig(std::vector<MessagePayload> const & messages, Signature const &aggregate_signature, std::vector<std::vector<PublicKey>> const &PK, GeneratorG2 const &generator_g2);
+        bool VerifyAgg(std::vector<MessagePayload> const & messages, Signature const &aggregate_signature, std::vector<std::vector<PublicKey>> const &PK, GeneratorG2 const &generator_g2);
 
 
       }// namespace mcl

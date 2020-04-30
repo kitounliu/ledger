@@ -84,7 +84,12 @@ TEST(MclMultiSigAggTests, RobustAggSignVerify)
 
   auto aggregate_signature = AggregateSig(signatures);
 
-  EXPECT_TRUE(VerifyAggSig(messages, aggregate_signature, PK, generator_g2));
+  std::string s = aggregate_signature.getStr(16);
+    std::cout<<"ARMS signature = "<< s <<"\n size of signature = "<<s.size()<<std::endl;
+
+
+
+  EXPECT_TRUE(VerifyAgg(messages, aggregate_signature, PK, generator_g2));
 
 }
 

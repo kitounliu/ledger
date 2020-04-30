@@ -167,7 +167,7 @@ namespace fetch {
 //                        std::string const &string_to_hash  = "Fetch.ai Elliptic Curve Generator G",
 //                        std::string const &string_to_hash2 = "Fetch.ai Elliptic Curve Generator H");
 
-
+        std::pair<PrivateKey, PublicVerifyKey> GenerateKeys(GeneratorG2 const &generator_g2);
 
 
 // For signatures
@@ -185,7 +185,7 @@ namespace fetch {
                 bool VerifySlow(PublicKey const &pk, PublicKey const &aggregate_public_key, std::string const &message,
                                 Signature const &sig, GeneratorG2 const &generator_g2);
 
-                std::pair<PrivateKey, PublicVerifyKey> GenerateKeyPair(GeneratorG2 const &generator_g2);
+
 
 // For aggregate signatures. Note only the verification of the signatures is done using VerifySign
 // but one must compute the public key to verify with

@@ -376,7 +376,7 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
         }
 
 
-        bool VerifyAggSig(std::vector<MessagePayload> const & messages, Signature const &aggregate_signature, std::vector<std::vector<PublicKey>> const &PK, GeneratorG2 const &generator_g2)
+        bool VerifyAgg(std::vector<MessagePayload> const & messages, Signature const &aggregate_signature, std::vector<std::vector<PublicKey>> const &PK, GeneratorG2 const &generator_g2)
         {
             assert(messages.size() == PK.size());
 

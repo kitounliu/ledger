@@ -23,7 +23,7 @@
 #include "benchmark/benchmark.h"
 
 
-constexpr uint32_t wallet_size = 2;
+constexpr uint32_t wallet_size = 1;
 
 using fetch::byte_array::ByteArray;
 using fetch::byte_array::ConstByteArray;
@@ -336,8 +336,6 @@ void ARMS_Verify(benchmark::State &state)
         }
 
 
-
-
         for (auto _ : state)
         {
             state.PauseTiming();
@@ -361,7 +359,7 @@ void ARMS_Verify(benchmark::State &state)
 
             state.ResumeTiming();
 
-            VerifyAggSig(messages, aggregate_signature, PK, generator_g2);
+            VerifyAgg(messages, aggregate_signature, PK, generator_g2);
         }
     }
 
@@ -369,7 +367,7 @@ void ARMS_Verify(benchmark::State &state)
 
 BENCHMARK(ARMS_Sign)->RangeMultiplier(2)->Range(1, 1<<10);
 BENCHMARK(ARMS_Verify)->RangeMultiplier(2)->Range(1, 1<<10);
-BENCHMARK(ARMS_Verify_Slow)->RangeMultiplier(2)->Range(0, 0);
-BENCHMARK(ARMS_Combine)->RangeMultiplier(2)->Range(0, 0);
-BENCHMARK(ARMS_Combine_Slow)->RangeMultiplier(2)->Range(0, 0);
-BENCHMARK(ARMS_VerifyAgg)->RangeMultiplier(2)->Range(0, 0);
+BENCHMARK(ARMS_Verify_Slow)->RangeMultiplier(2)->Range(1, 1<<10);
+BENCHMARK(ARMS_Combine)->RangeMultiplier(2)->Range(5, 5);
+BENCHMARK(ARMS_Combine_Slow)->RangeMultiplier(2)->Range(5, 5);
+BENCHMARK(ARMS_VerifyAgg)->RangeMultiplier(2)->Range(5, 5);

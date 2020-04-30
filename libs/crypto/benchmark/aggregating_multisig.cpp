@@ -23,7 +23,7 @@
 #include "benchmark/benchmark.h"
 
 
-constexpr uint32_t wallet_size = 2;
+constexpr uint32_t wallet_size = 1;
 
 using fetch::byte_array::ByteArray;
 using fetch::byte_array::ConstByteArray;
@@ -156,8 +156,8 @@ void AMSP_VerifyMulti(benchmark::State &state)
         SetGenerator(generator_g2);
 
         // Create keys
-        uint32_t                  transaction_size = 20;
-        auto                      wallet_size = static_cast<uint32_t>(state.range(0));
+        uint32_t                  transaction_size = static_cast<uint32_t>(state.range(0));
+ //       auto                      wallet_size
 
         std::vector<std::vector<PrivateKey>>           SK;
         std::vector<std::vector<PublicKey>>            PK;
@@ -212,8 +212,9 @@ void AMSP_VerifyMulti(benchmark::State &state)
             }
 
 
-            state.ResumeTiming();
+
             std::vector<Signature> validSignatures;
+            state.ResumeTiming();
             for (uint32_t i = 0; i < transaction_size; ++i){
               bool b = VerifyMulti(PK[i], messages[i], sigmas[i], generator_g2);
               if (b) {
@@ -315,7 +316,7 @@ void AMSP_VerifyMulti(benchmark::State &state)
 //}
 
 //BENCHMARK(AMSP_Sign)->Apply(CustomArguments);
-BENCHMARK(AMSP_Sign)->RangeMultiplier(2)->Range(1, 1<<12);
-BENCHMARK(AMSP_VerifyMulti)->RangeMultiplier(2)->Range(1, 1<<12);
-BENCHMARK(AMSP_Aggregate)->RangeMultiplier(2)->Range(50, 50);
-BENCHMARK(AMSP_VerifyAgg)->RangeMultiplier(2)->Range(50, 50);
+BENCHMARK(AMSP_Sign)->RangeMultiplier(2)->Range(1, 1<<10);
+BENCHMARK(AMSP_VerifyMulti)->RangeMultiplier(2)->Range(1, 1<<10);
+BENCHMARK(AMSP_Aggregate)->RangeMultiplier(2)->Range(5, 5);
+BENCHMARK(AMSP_VerifyAgg)->RangeMultiplier(2)->Range(5, 5);

@@ -33,7 +33,7 @@
 #endif
 
 
-#define BLS12
+//#define BLS12
 //#define BN384
 //#define BN512
 

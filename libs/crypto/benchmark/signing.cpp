@@ -63,8 +63,6 @@ ConstByteArray GenerateRandomData()
         auto                      wallet_size = static_cast<uint32_t>(state.range(0));
 
 
-
-
         for (auto _ : state)
         {
             state.PauseTiming();
@@ -123,7 +121,13 @@ void ECDSA_Verify(benchmark::State &state)
 
 }
 
+
+
+
+
 }  // namespace
 
-BENCHMARK(ECDSA_Sign)->RangeMultiplier(2)->Range(1, 1<<10);
-BENCHMARK(ECDSA_Verify)->RangeMultiplier(2)->Range(1, 1<<10);
+
+
+BENCHMARK(ECDSA_Sign)->RangeMultiplier(2)->Range(1, 1<<12);
+BENCHMARK(ECDSA_Verify)->RangeMultiplier(2)->Range(1, 1<<12);

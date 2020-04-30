@@ -102,7 +102,7 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
  * @param generator Choice of generator on the elliptic curve
  * @return Pair of private and public keys
  */
-    std::pair<PrivateKey, PublicVerifyKey> GenerateKeyPair(GeneratorG2 const &generator_g2)
+    std::pair<PrivateKey, PublicVerifyKey> GenerateKeys(GeneratorG2 const &generator_g2)
     {
         std::pair<PrivateKey, PublicVerifyKey> key_pair;
         key_pair.first.setRand();

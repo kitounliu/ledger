@@ -53,7 +53,7 @@ RNG rng;
 
         for (uint32_t i = 0; i < cabinet_size; ++i)
         {
-            auto new_keys                         = GenerateKeyPair(generator_g2);
+            auto new_keys                         = GenerateKeys(generator_g2);
             private_keys[i] = new_keys.first;
             public_verify_keys[i] = new_keys.second;
         }
@@ -94,7 +94,7 @@ void RSMS_SignProve(benchmark::State &state)
 
     for (uint32_t i = 0; i < cabinet_size; ++i)
     {
-        auto new_keys                         = GenerateKeyPair(generator_g2);
+        auto new_keys                         = GenerateKeys(generator_g2);
         private_keys[i] = new_keys.first;
         public_verify_keys[i] = new_keys.second;
     }
@@ -137,7 +137,7 @@ void RSMS_Verify(benchmark::State &state)
 
         for (uint32_t i = 0; i < cabinet_size; ++i)
         {
-            auto new_keys                         = GenerateKeyPair(generator_g2);
+            auto new_keys                         = GenerateKeys(generator_g2);
             private_keys[i] = new_keys.first;
             public_verify_keys[i] = new_keys.second;
         }
@@ -181,7 +181,7 @@ void RSMS_Verify(benchmark::State &state)
 
         for (uint32_t i = 0; i < cabinet_size; ++i)
         {
-            auto new_keys                         = GenerateKeyPair(generator_g2);
+            auto new_keys                         = GenerateKeys(generator_g2);
             private_keys[i] = new_keys.first;
             public_verify_keys[i] = new_keys.second;
         }
@@ -222,7 +222,7 @@ void RSMS_Verify(benchmark::State &state)
 
         for (uint32_t i = 0; i < cabinet_size; ++i)
         {
-            auto new_keys                         = GenerateKeyPair(generator_g2);
+            auto new_keys                         = GenerateKeys(generator_g2);
             private_keys[i] = new_keys.first;
             public_verify_keys[i] = new_keys.second;
         }
@@ -274,7 +274,7 @@ void RSMS_Verify(benchmark::State &state)
 
         for (uint32_t i = 0; i < cabinet_size; ++i)
         {
-            auto new_keys   = GenerateKeyPair(generator_g2);
+            auto new_keys   = GenerateKeys(generator_g2);
             private_keys[i] = new_keys.first;
             public_verify_keys[i] = new_keys.second;
         }
@@ -329,7 +329,7 @@ void RSMS_Verify(benchmark::State &state)
 
         for (uint32_t i = 0; i < cabinet_size; ++i)
         {
-            auto new_keys                         = GenerateKeyPair(generator_g2);
+            auto new_keys                         = GenerateKeys(generator_g2);
             private_keys[i] = new_keys.first;
             public_verify_keys[i] = new_keys.second;
 
@@ -344,7 +344,6 @@ void RSMS_Verify(benchmark::State &state)
         {
             state.PauseTiming();
             std::string message{"hello" + std::to_string(rand() * rand())};
-
 
             Signature aggregate_signature = Sign(group_public_key.aggregate_public_key, message, fast_key);
 
