@@ -16,18 +16,16 @@
 //
 //------------------------------------------------------------------------------
 
-#include "crypto/robust_multisig.hpp"
-
+#include "crypto/multisig_rsmspop.hpp"
 
 #include <cassert>
 #include <cstddef>
 #include <stdexcept>
 #include <unordered_map>
 
-
 namespace fetch {
 namespace crypto {
-namespace rsms {
+namespace rsmspop {
 namespace mcl {
 
 std::atomic<bool>  details::MCLInitialiser::was_initialised{false};
@@ -368,6 +366,6 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
         }
 
     }  // namespace mcl}  // namespace mcl
-}  // namespace rsms
+}  // namespace rsmspop
 }  // namespace crypto
 }  // namespace fetch

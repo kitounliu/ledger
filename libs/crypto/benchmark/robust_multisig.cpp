@@ -18,7 +18,7 @@
 
 #include "core/byte_array/byte_array.hpp"
 #include "core/random/lcg.hpp"
-#include "crypto/robust_multisig.hpp"
+#include "crypto/multisig_rsmspop.hpp"
 
 #include "benchmark/benchmark.h"
 
@@ -26,7 +26,7 @@ using fetch::byte_array::ByteArray;
 using fetch::byte_array::ConstByteArray;
 
 
-using namespace fetch::crypto::rsms::mcl;
+using namespace fetch::crypto::rsmspop::mcl;
 
 using RNG = fetch::random::LinearCongruentialGenerator;
 
@@ -35,7 +35,7 @@ namespace {
 RNG rng;
 
 
-    void RSMS_Sign(benchmark::State &state)
+    void RSMSPOP_Sign(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -76,7 +76,7 @@ RNG rng;
     }
 
 
-void RSMS_SignProve(benchmark::State &state)
+void RSMSPOP_SignProve(benchmark::State &state)
 {
   details::MCLInitialiser();
   GeneratorG2 generator_g2;
@@ -119,7 +119,7 @@ void RSMS_SignProve(benchmark::State &state)
 
 
 
-void RSMS_Verify(benchmark::State &state)
+void RSMSPOP_Verify(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -163,7 +163,7 @@ void RSMS_Verify(benchmark::State &state)
 
 
 
-    void RSMS_Verify_Slow(benchmark::State &state)
+    void RSMSPOP_Verify_Slow(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -203,7 +203,7 @@ void RSMS_Verify(benchmark::State &state)
 
 
 
-    void RSMS_Combine(benchmark::State &state)
+    void RSMSPOP_Combine(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -256,7 +256,7 @@ void RSMS_Verify(benchmark::State &state)
     }
 
 
-    void RSMS_Combine_Slow(benchmark::State &state)
+    void RSMSPOP_Combine_Slow(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -306,7 +306,7 @@ void RSMS_Verify(benchmark::State &state)
 
 
 
-    void RSMS_VerifyMulti(benchmark::State &state)
+    void RSMSPOP_VerifyMulti(benchmark::State &state)
     {
         details::MCLInitialiser();
         GeneratorG2 generator_g2;
@@ -357,10 +357,10 @@ void RSMS_Verify(benchmark::State &state)
 
 }  // namespace
 
-BENCHMARK(RSMS_Sign)->RangeMultiplier(2)->Range(50, 500);
-BENCHMARK(RSMS_SignProve)->RangeMultiplier(2)->Range(50, 500);
-BENCHMARK(RSMS_Verify)->RangeMultiplier(2)->Range(50, 500);
-BENCHMARK(RSMS_Verify_Slow)->RangeMultiplier(2)->Range(50, 500);
-BENCHMARK(RSMS_Combine)->RangeMultiplier(2)->Range(50, 500);
-BENCHMARK(RSMS_Combine_Slow)->RangeMultiplier(2)->Range(50, 500);
-BENCHMARK(RSMS_VerifyMulti)->RangeMultiplier(2)->Range(50, 500);// too slow, turned off
+BENCHMARK(RSMSPOP_Sign)->RangeMultiplier(2)->Range(50, 500);
+BENCHMARK(RSMSPOP_SignProve)->RangeMultiplier(2)->Range(50, 500);
+BENCHMARK(RSMSPOP_Verify)->RangeMultiplier(2)->Range(50, 500);
+BENCHMARK(RSMSPOP_Verify_Slow)->RangeMultiplier(2)->Range(50, 500);
+BENCHMARK(RSMSPOP_Combine)->RangeMultiplier(2)->Range(50, 500);
+BENCHMARK(RSMSPOP_Combine_Slow)->RangeMultiplier(2)->Range(50, 500);
+BENCHMARK(RSMSPOP_VerifyMulti)->RangeMultiplier(2)->Range(50, 500);// too slow, turned off

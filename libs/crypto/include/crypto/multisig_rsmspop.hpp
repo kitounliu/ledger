@@ -33,7 +33,7 @@
 
 namespace fetch {
     namespace crypto {
-        namespace rsms {
+        namespace rsmspop {
             namespace mcl {
 
                 namespace details {
@@ -198,16 +198,16 @@ namespace fetch {
                                  GeneratorG2 const &generator_g2);
 
             }// namespace mcl
-        }  // namespace rsms
+        }  // namespace rsmspop
     }  // namespace crypto
 
     namespace serializers {
         template <typename D>
-        struct ArraySerializer<crypto::rsms::mcl::Signature, D>
+        struct ArraySerializer<crypto::rsmspop::mcl::Signature, D>
         {
 
         public:
-            using Type       = crypto::rsms::mcl::Signature;
+            using Type       = crypto::rsmspop::mcl::Signature;
             using DriverType = D;
 
             template <typename Constructor>
@@ -233,11 +233,11 @@ namespace fetch {
         };
 
         template <typename D>
-        struct ArraySerializer<crypto::rsms::mcl::PrivateKey, D>
+        struct ArraySerializer<crypto::rsmspop::mcl::PrivateKey, D>
         {
 
         public:
-            using Type       = crypto::rsms::mcl::PrivateKey;
+            using Type       = crypto::rsmspop::mcl::PrivateKey;
             using DriverType = D;
 
             template <typename Constructor>
@@ -263,11 +263,11 @@ namespace fetch {
         };
 
         template <typename D>
-        struct ArraySerializer<crypto::rsms::mcl::PublicKey, D>
+        struct ArraySerializer<crypto::rsmspop::mcl::PublicKey, D>
         {
 
         public:
-            using Type       = crypto::rsms::mcl::PublicKey;
+            using Type       = crypto::rsmspop::mcl::PublicKey;
             using DriverType = D;
 
             template <typename Constructor>
@@ -293,10 +293,10 @@ namespace fetch {
         };
 
         template <typename V, typename D>
-        struct ArraySerializer<std::pair<crypto::rsms::mcl::PublicKey, V>, D>
+        struct ArraySerializer<std::pair<crypto::rsmspop::mcl::PublicKey, V>, D>
         {
         public:
-            using Type       = std::pair<crypto::rsms::mcl::PublicKey, V>;
+            using Type       = std::pair<crypto::rsmspop::mcl::PublicKey, V>;
             using DriverType = D;
 
             template <typename Constructor>

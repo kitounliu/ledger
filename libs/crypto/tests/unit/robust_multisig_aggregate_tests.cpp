@@ -84,8 +84,8 @@ TEST(MclMultiSigAggTests, RobustAggSignVerify)
 
   auto aggregate_signature = AggregateSig(signatures);
 
-  std::string s = aggregate_signature.getStr(16);
-    std::cout<<"ARMS signature = "<< s <<"\n size of signature = "<<s.size()<<std::endl;
+  //  std::string s = aggregate_signature.getStr(16);
+  //  std::cout<<"ARMS signature = "<< s <<"\n size of signature = "<<s.size()<<std::endl;
 
 
 
@@ -95,7 +95,7 @@ TEST(MclMultiSigAggTests, RobustAggSignVerify)
 
 
 
-TEST(MclOperationTests, PairingTest){
+TEST(MclOperationTests, G1PairingTest){
     details::MCLInitialiser();
 
     GeneratorG1 g("hello"), h("world"), gh, g2x;
@@ -123,4 +123,37 @@ TEST(MclOperationTests, PairingTest){
     bn::GT::pow(et, eg, x);
 
     EXPECT_TRUE(eg2x == et);
+}
+
+
+
+
+TEST(MclOperationTests, G2PairingTest){
+  details::MCLInitialiser();
+
+  GeneratorG2 g("hello"), h("world"), gh, g2x;
+
+  bn::G2::add(gh, g, h);
+
+  GeneratorG1 g1;
+  SetGenerator(g1);
+
+  bn::Fp12 eg, eh, egh, eadd, eg2x, et;
+
+  bn::pairing(eg, g1, g);
+  bn::pairing(eh, g1, h);
+  bn::GT::mul(eadd, eg, eh);
+
+  bn::pairing(egh, g1, gh);
+
+  EXPECT_TRUE(eadd == egh);
+
+  PrivateKey x;
+  x.setRand();
+
+  bn::G2::mul(g2x, g, x);
+  bn::pairing(eg2x, g1, g2x);
+  bn::GT::pow(et, eg, x);
+
+  EXPECT_TRUE(eg2x == et);
 }

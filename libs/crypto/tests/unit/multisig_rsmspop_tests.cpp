@@ -16,7 +16,7 @@
 //
 //------------------------------------------------------------------------------
 
-#include "crypto/robust_multisig.hpp"
+#include "crypto/multisig_rsmspop.hpp"
 
 #include "gtest/gtest.h"
 
@@ -24,11 +24,11 @@
 #include <iostream>
 #include <ostream>
 
-using namespace fetch::crypto::rsms::mcl;
+using namespace fetch::crypto::rsmspop::mcl;
 using namespace fetch::byte_array;
 
 
-TEST(MclMultiSigTests, RobustSubgroupSignVerify)
+TEST(MultiSigRsmspopMclTests, RobustSubgroupSignVerify)
 {
   details::MCLInitialiser();
 
@@ -58,13 +58,11 @@ TEST(MclMultiSigTests, RobustSubgroupSignVerify)
   std::unordered_map<uint32_t, Signature> signatures;
   for (uint32_t i = 0; i < cabinet_size; ++i)
   {
-      Signature signature = Sign(group_public_key.aggregate_public_key, message, private_keys[i]);
-      EXPECT_TRUE(VerifySlow(group_public_key.public_verify_key_list[i].public_key, group_public_key.aggregate_public_key, message, signature, generator_g2));
- //     Proof pi = Prove(group_public_key.public_verify_key_list[i], group_public_key.aggregate_public_key, message, signature, private_keys[i]);
- //     EXPECT_TRUE(Verify(group_public_key.public_verify_key_list[i], group_public_key.aggregate_public_key, message, signature, pi));
+      Signature signature = Sign( message, private_keys[i], group_public_key.tag);
+      EXPECT_TRUE(VerifySlow(message, signature, group_public_key.tag, group_public_key.public_verify_keys[i].public_key, generator_g2));
 
-      std::pair<Signature, Proof> sigma = SignProve(group_public_key.public_verify_key_list[i], group_public_key.aggregate_public_key, message, private_keys[i]);
-      EXPECT_TRUE(Verify(group_public_key.public_verify_key_list[i], group_public_key.aggregate_public_key, message, sigma.first, sigma.second));
+      std::pair<Signature, Proof> sigma = SignProve( message, private_keys[i], group_public_key.tag, group_public_key.public_verify_keys[i]);
+      EXPECT_TRUE(Verify(message, sigma.first, sigma.second, group_public_key.tag, group_public_key.public_verify_keys[i]));
 
       signatures.insert({i, signature});
   }
@@ -76,7 +74,7 @@ TEST(MclMultiSigTests, RobustSubgroupSignVerify)
 
 
 
-TEST(MclMultiSigTests, RobustSubgroupCompress)
+TEST(MultiSigRsmspopMclTests, RobustSubgroupCompress)
 {
     details::MCLInitialiser();
 
@@ -107,8 +105,8 @@ TEST(MclMultiSigTests, RobustSubgroupCompress)
     for (uint32_t i = 0; i < cabinet_size; ++i)
     {
 
-        std::pair<Signature, Proof> sigma = SignProve(group_public_key.public_verify_key_list[i], group_public_key.aggregate_public_key, message, private_keys[i]);
-        EXPECT_TRUE(Verify(group_public_key.public_verify_key_list[i], group_public_key.aggregate_public_key, message, sigma.first, sigma.second));
+        std::pair<Signature, Proof> sigma = SignProve( message, private_keys[i], group_public_key.tag, group_public_key.public_verify_keys[i]);
+        EXPECT_TRUE(Verify(message, sigma.first, sigma.second, group_public_key.tag, group_public_key.public_verify_keys[i]));
 
         if (i%2==0){
             signatures1.insert({i, sigma.first});
@@ -124,3 +122,72 @@ TEST(MclMultiSigTests, RobustSubgroupCompress)
 
     EXPECT_TRUE(VerifyMulti(message, sigma, group_public_key, generator_g2));
 }
+
+
+
+TEST(MultiSigRsmspopMclTests, Aggregate)
+{
+  details::MCLInitialiser();
+
+  GeneratorG2 generator_g2;
+  SetGenerator(generator_g2);
+
+  uint32_t                          cabinet_size = 8;
+  uint32_t                          block_height = 5;
+
+  std::vector<std::vector<PrivateKey>>           SK;
+  std::vector<std::vector<PublicVerifyKey>>            PVK;
+  std::vector<GroupPublicKey>                   GPK;
+  std::vector<MultiSignature>                   multiSigs;
+
+  SK.resize(block_height);
+  PVK.resize(block_height);
+  GPK.resize(block_height);
+  multiSigs.resize(block_height);
+  for (uint32_t i = 0; i< block_height; i++)
+  {
+    SK[i].resize(cabinet_size);
+    PVK[i].resize(cabinet_size);
+  }
+
+  for (uint32_t i = 0; i < block_height; i++)
+  {
+    for (uint32_t j = 0; j < cabinet_size; j++)
+    {
+      auto new_keys                         = GenerateKeys(generator_g2);
+      SK[i][j] = new_keys.first;
+      PVK[i][j] = new_keys.second;
+    }
+    EXPECT_TRUE(GPK[i].GroupSet(PVK[i], generator_g2));
+  }
+
+  std::vector<MessagePayload>                          messages;
+  messages.resize(block_height);
+  for (uint32_t i = 0; i < block_height; i++){
+    messages[i] = "block header 000" + std::to_string(rand());
+  }
+
+
+  for (uint32_t i = 0; i < block_height; i++)
+  {
+    std::unordered_map<uint32_t, Signature> signatures;
+    for (uint32_t j = 0; j < cabinet_size; j++)
+    {
+      Signature sig = Sign(messages[i], SK[i][j], GPK[i].tag);
+      signatures.insert({j, sig});
+    }
+    multiSigs[i] = MultiSig(signatures, cabinet_size);
+    EXPECT_TRUE(VerifyMulti(messages[i], multiSigs[i], GPK[i], generator_g2));
+  }
+
+  auto aggregate_signature = AggregateSig(multiSigs);
+
+  //  std::string s = aggregate_signature.getStr(16);
+  //  std::cout<<"ARMS signature = "<< s <<"\n size of signature = "<<s.size()<<std::endl;
+
+
+
+  EXPECT_TRUE(VerifyAgg(messages, aggregate_signature, GPK, generator_g2));
+
+}
+
