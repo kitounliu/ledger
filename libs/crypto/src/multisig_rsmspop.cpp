@@ -76,10 +76,16 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 //        bn::Fr::add(*this, *this, value);
 //    }
 
-    Signature::Signature()
-    {
+
+      GroupTag::GroupTag() {
         clear();
-    }
+      }
+
+
+      Signature::Signature()
+          {
+              clear();
+          }
 
 
     /* todo: implement toString and assign for all classes
@@ -136,17 +142,28 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
     }
 
 
-     bool GroupPublicKey::GroupSet(std::vector<PublicVerifyKey> const &public_verify_keys, GeneratorG2 const &generator_g2){
+     bool GroupPublicKey::GroupSet(std::vector<PublicVerifyKey> const &public_verify_key_list, GeneratorG2 const &generator_g2){
 
-         for (const auto & public_verify_key : public_verify_keys){
+         for (const auto & public_verify_key : public_verify_key_list){
              if (!public_verify_key.Validate(generator_g2)) return false;
          }
 
-         for (size_t i = 0; i < public_verify_keys.size(); i++){
-             bn::G2::add(aggregate_public_key, aggregate_public_key, public_verify_keys[i].public_key);
-         }
+         const std::string hash_function_reuse_appender =
+             "MultiSig-RSMSPOP-00000000000000000000000000000000";
 
-         public_verify_key_list.insert(public_verify_key_list.end(), public_verify_keys.begin(),public_verify_keys.end());
+         std::string concatenated_public_keys;
+         concatenated_public_keys.reserve(hash_function_reuse_appender.length() +
+                                          (public_verify_key_list.size() + 1) * PUBLIC_KEY_BYTE_SIZE);
+
+         concatenated_public_keys += hash_function_reuse_appender;
+
+         for (auto const &key : public_verify_key_list)
+         {
+           concatenated_public_keys += key.public_key.getStr();
+         }
+         tag.setHashOf(concatenated_public_keys);
+
+         public_verify_keys.insert(public_verify_keys.end(), public_verify_key_list.begin(),public_verify_key_list.end());
 
          return true;
     }
@@ -159,13 +176,13 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
  * @param x_i Secret key share
  * @return Signature share
  */
-    Signature Sign(PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk)
+    Signature Sign(MessagePayload const &message, PrivateKey const &sk, GroupTag const &group_tag)
     {
-        std::string apk_mess = aggregate_public_key.getStr() + message;
+        std::string gtag_mess = group_tag.getStr() + message;
 
         Signature Hmess;
         Signature sig;
-        bn::hashAndMapToG1(Hmess, apk_mess);
+        bn::hashAndMapToG1(Hmess, gtag_mess);
 
         bn::G1::mul(sig, Hmess, sk);  // sign = s H(m)
 
@@ -175,43 +192,13 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
 
 
-
-
-    // create a NIZK proof
-    Proof Prove(const PublicVerifyKey &public_verify_key, const PublicKey &aggregate_public_key, const MessagePayload &message, const Signature &sig,
-                           const PrivateKey &sk) {
-        std::string apk_mess = aggregate_public_key.getStr() + message;
-
-        Signature Hmess;
-        bn::hashAndMapToG1(Hmess, apk_mess);
-
-        PrivateKey r;
-        r.setRand();
-
-        VerifyKey Hpk, com1, com2;
-        bn::hashAndMapToG1(Hpk, public_verify_key.public_key.getStr());
-        bn::G1::mul(com1, Hpk, r);
-
-        bn::G1::mul(com2, Hmess, r);
-
-        Proof pi;
-        pi.first.setHash(Hpk, Hmess, public_verify_key.verify_key, sig, com1, com2);
-        PrivateKey localVar;
-        bn::Fr::mul(localVar, pi.first, sk);
-        bn::Fr::add(pi.second, localVar, r);
-        return pi;
-    }
-
-
-
-
-        std::pair<Signature, Proof> SignProve(const PublicVerifyKey &public_verify_key, PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk)
+        std::pair<Signature, Proof> SignProve(MessagePayload const &message, PrivateKey const &sk, GroupTag const &group_tag, const PublicVerifyKey &public_verify_key)
         {
-            std::string apk_mess = aggregate_public_key.getStr() + message;
+          std::string gtag_mess = group_tag.getStr() + message;
 
             Signature Hmess;
             Signature sig;
-            bn::hashAndMapToG1(Hmess, apk_mess);
+            bn::hashAndMapToG1(Hmess, gtag_mess);
 
             bn::G1::mul(sig, Hmess, sk);  // sign = s H(m)
 
@@ -237,11 +224,11 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
 
 // verify a NIZK proof (sig, pi)
-        bool Verify(const PublicVerifyKey &public_verify_key, const PublicKey &aggregate_public_key, const MessagePayload &message, const Signature &sig, const Proof &pi) {
-            std::string apk_mess = aggregate_public_key.getStr() + message;
+        bool Verify(MessagePayload const &message,  Signature const &sig, const Proof &pi, GroupTag const &group_tag, PublicVerifyKey const &public_verify_key) {
+            std::string gtag_mess = group_tag.getStr() + message;
 
             Signature Hmess;
-            bn::hashAndMapToG1(Hmess, apk_mess);
+            bn::hashAndMapToG1(Hmess, gtag_mess);
 
             VerifyKey Hpk, com1,  com2, tmp1, tmp2;
             bn::hashAndMapToG1(Hpk, public_verify_key.public_key.getStr());
@@ -271,18 +258,18 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
  * @param G Generator used in DKG
  * @return
  */
-        bool VerifySlow(PublicKey const &pk, PublicKey const &aggregate_public_key,  MessagePayload const &message, Signature const &sig,
+        bool VerifySlow(MessagePayload const &message, Signature const &sig, GroupTag const &group_tag, PublicKey const &public_key,
                         GeneratorG2 const &generator_g2)
         {
-            std::string apk_mess = aggregate_public_key.getStr() + message;
+            std::string gtag_mess = group_tag.getStr() + message;
 
             Signature Hmess;
-            bn::hashAndMapToG1(Hmess, apk_mess);
+            bn::hashAndMapToG1(Hmess, gtag_mess);
 
             bn::Fp12  e1, e2;
 
             bn::pairing(e1, sig, generator_g2);
-            bn::pairing(e2, Hmess, pk);
+            bn::pairing(e2, Hmess, public_key);
 
             return e1 == e2;
         }
@@ -299,17 +286,17 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
  */
         MultiSignature MultiSig(std::unordered_map<uint32_t, Signature> const &signatures, uint32_t cabinet_size)
         {
-            Signature    aggregate_signature;
+            Signature    multi_signature;
             SignerRecord signers;
             signers.resize(cabinet_size, 0);
 
             // Add individual signatures to compute aggregate signature
             for (auto const &sig : signatures)
             {
-                bn::G1::add(aggregate_signature, aggregate_signature, sig.second);
+                bn::G1::add(multi_signature, multi_signature, sig.second);
                 signers[sig.first] = 1;
             }
-            return std::make_pair(aggregate_signature, signers);
+            return std::make_pair(multi_signature, signers);
         }
 
 
@@ -334,28 +321,35 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
         }
 
 
+        PublicKey AggregatePublicKey(GroupPublicKey const &gpk, SignerRecord signers)
+        {
+          assert(signers.size() == gpk.public_verify_keys.size());
+
+          PublicKey aggregate_public_key;
+
+          for(uint32_t i = 0; i < signers.size(); i++){
+            if (signers[i] == 1){
+                 bn::G2::add(aggregate_public_key, aggregate_public_key, gpk.public_verify_keys[i].public_key);
+            }
+          }
+
+          return aggregate_public_key;
+        }
+
 
         bool VerifyMulti(MessagePayload const &message, MultiSignature const &sigma, GroupPublicKey const &gpk, GeneratorG2 const &generator_g2)
         {
-            PublicKey tpk;
-
-            assert(sigma.second.size() <= gpk.public_verify_key_list.size());
-
-            for(uint32_t i = 0; i<sigma.second.size();i++){
-                if (sigma.second[i]==1) {
-                    bn::G2::add(tpk, tpk, gpk.public_verify_key_list[i].public_key);
-                }
-            }
+            PublicKey tpk = AggregatePublicKey(gpk, sigma.second);
 
             if (tpk.isZero()) {
                 return false;
             }
 
 
-            std::string apk_mess = gpk.aggregate_public_key.getStr() + message;
+            std::string gtag_mess = gpk.tag.getStr() + message;
 
             Signature Hmess;
-            bn::hashAndMapToG1(Hmess, apk_mess);
+            bn::hashAndMapToG1(Hmess, gtag_mess);
 
             bn::Fp12  e1, e2;
 
@@ -364,6 +358,56 @@ constexpr uint16_t PUBLIC_KEY_BYTE_SIZE = 310;
 
             return e1 == e2;
         }
+
+
+        // aggregate_signature = multi_sig_1 multi_sig_2 ... multi_sig_k
+        AggSignature AggregateSig(std::vector<MultiSignature> const &multi_signatures)
+        {
+          AggSignature aggregate_signature;
+
+          for (auto const &msig : multi_signatures)
+          {
+            bn::G1::add(aggregate_signature.first, aggregate_signature.first, msig.first);
+            aggregate_signature.second.push_back(msig.second);
+          }
+          return aggregate_signature;
+        }
+
+
+
+        bool VerifyAgg(std::vector<MessagePayload> const & messages, AggSignature const &aggregate_signature, std::vector<GroupPublicKey> const &gpks, GeneratorG2 const &generator_g2)
+        {
+          assert(messages.size() == gpks.size() && gpks.size() == aggregate_signature.second.size());
+
+          std::vector<PublicKey> apks;
+          apks.resize(gpks.size());
+          for (uint32_t i = 0; i < gpks.size(); i++){
+            apks[i] = AggregatePublicKey(gpks[i], aggregate_signature.second[i]);
+          }
+
+          bn::Fp12  e1, e2;
+          e2.setOne();
+
+
+          bn::pairing(e1,  aggregate_signature.first, generator_g2);
+
+          for (uint32_t i = 0; i < gpks.size(); i++){
+            std::string gtag_mess = gpks[i].tag.getStr() + messages[i];
+            Signature Hmess;
+            bn::hashAndMapToG1(Hmess, gtag_mess);
+
+            bn::Fp12  tmp;
+            bn::pairing(tmp,  Hmess, apks[i]);
+
+            bn::GT::mul(e2, e2, tmp);
+
+          }
+
+          return e1 == e2;
+        }
+
+
+
 
     }  // namespace mcl}  // namespace mcl
 }  // namespace rsmspop

@@ -110,13 +110,19 @@ namespace fetch {
                 };
 
 
-                struct GroupPublicKey {
-                    PublicKey aggregate_public_key;
-                    std::vector<PublicVerifyKey> public_verify_key_list;
+                class GroupTag : public bn::Fr {
+                public:
+                  GroupTag();
+                };
+
+
+            struct GroupPublicKey {
+                    GroupTag tag;
+                    std::vector<PublicVerifyKey> public_verify_keys;
 
                     GroupPublicKey() = default;
 
-                    bool GroupSet(std::vector<PublicVerifyKey> const &public_verify_keys, GeneratorG2 const &generator_g2);
+                    bool GroupSet(std::vector<PublicVerifyKey> const &public_verify_key_list, GeneratorG2 const &generator_g2);
                 };
 
 
@@ -124,6 +130,7 @@ namespace fetch {
                 using CabinetIndex       = uint32_t;
                 using SignerRecord       = std::vector<uint8_t>;
                 using MultiSignature = std::pair<Signature, SignerRecord>;
+                using AggSignature = std::pair<Signature, std::vector<SignerRecord>>;
 
 /**
  * Vector initialisation for mcl data structures
@@ -171,35 +178,38 @@ namespace fetch {
 
 
 // For signatures
-                Signature Sign(PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk);
+        Signature Sign(MessagePayload const &message, PrivateKey const &sk, GroupTag const &group_tag);
 
-                Proof Prove(const PublicVerifyKey &public_verify_key, const PublicKey &aggregate_public_key,
-                            const MessagePayload &message, const Signature &sig,
-                            const PrivateKey &sk);
+        std::pair<Signature, Proof> SignProve(MessagePayload const &message, PrivateKey const &sk, GroupTag const &group_tag, const PublicVerifyKey &public_verify_key);
 
-                std::pair<Signature, Proof> SignProve(const PublicVerifyKey &public_verify_key, PublicKey const &aggregate_public_key, MessagePayload const &message, PrivateKey const &sk);
 
-                bool Verify(const PublicVerifyKey &public_verify_key, const PublicKey &aggregate_public_key,
-                            const MessagePayload &message, const Signature &sig, const Proof &pi);
+        bool Verify(MessagePayload const &message,  Signature const &sig, const Proof &pi, GroupTag const &group_tag, PublicVerifyKey const &public_verify_key);
 
-                bool VerifySlow(PublicKey const &pk, PublicKey const &aggregate_public_key, std::string const &message,
-                                Signature const &sig, GeneratorG2 const &generator_g2);
+
+        bool VerifySlow(MessagePayload const &message, Signature const &sig, GroupTag const &group_tag, PublicKey const &public_key,
+                        GeneratorG2 const &generator_g2);
 
 
 
-// For aggregate signatures. Note only the verification of the signatures is done using VerifySign
-// but one must compute the public key to verify with
+// multi-signatures
 
-                MultiSignature MultiSig(std::unordered_map<uint32_t, Signature> const &signatures, uint32_t cabinet_size);
+         MultiSignature MultiSig(std::unordered_map<uint32_t, Signature> const &signatures, uint32_t cabinet_size);
 
-                MultiSignature Compress(MultiSignature const &sigma1, MultiSignature const &sigma2, uint32_t cabinet_size);
+         MultiSignature Compress(MultiSignature const &sigma1, MultiSignature const &sigma2, uint32_t cabinet_size);
 
-                bool VerifyMulti(MessagePayload const &message, MultiSignature const &sigma, GroupPublicKey const &gpk,
-                                 GeneratorG2 const &generator_g2);
+        PublicKey AggregatePublicKey(GroupPublicKey const &gpk, SignerRecord signers);
 
-            }// namespace mcl
-        }  // namespace rsmspop
-    }  // namespace crypto
+        bool VerifyMulti(MessagePayload const &message, MultiSignature const &sigma, GroupPublicKey const &gpk, GeneratorG2 const &generator_g2);
+
+      //aggregate signatures
+      AggSignature AggregateSig(std::vector<MultiSignature> const &multi_signatures);
+
+      bool VerifyAgg(std::vector<MessagePayload> const & messages, AggSignature const &aggregate_signature, std::vector<GroupPublicKey> const &gpks, GeneratorG2 const &generator_g2);
+
+
+        }// namespace mcl
+     }  // namespace rsmspop
+ }  // namespace crypto
 
     namespace serializers {
         template <typename D>
